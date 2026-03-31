@@ -1,0 +1,24 @@
+Plain paragraph.
+Two runs merged.
+Line one.
+Line two.
+Col1	Col2
+non-breaking
+soft - hyphen
+--------------------------------------------------------------------------------
+
+SHOUTING TEXT
+See note[1] for details.
+Visit our site.
+https://git-scm.com
+      Indented text.
+    First-line indent.
+      Hanging indent.
+(C) (R) (TM) (1/2) Euro
+"Hello"  --  World
+AT&T, 5 > 3, 'quoted'
+visible text
+beforeafter
+textmore
+before wp14after wp14
+

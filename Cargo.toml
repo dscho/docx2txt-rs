@@ -3,9 +3,16 @@ name = "docx2txt"
 version = "0.1.0"
 edition = "2024"
 
+[features]
+generate-fixtures = []
+
 [dependencies]
 regex = "1"
 zip = "2"
+
+[[bin]]
+name = "generate-fixtures"
+required-features = ["generate-fixtures"]
 
 [profile.release]
 lto = true
