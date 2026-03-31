@@ -8,7 +8,7 @@ generate-fixtures = []
 
 [dependencies]
 regex = "1"
-zip = "2"
+zip = { version = "2", default-features = false, features = ["deflate"] }
 
 [[bin]]
 name = "generate-fixtures"
