@@ -14,20 +14,16 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-            target: x86_64-unknown-linux-gnu
+            targets: x86_64-unknown-linux-gnu
             suffix: linux-x86_64
             ext: ""
           - os: windows-latest
-            target: x86_64-pc-windows-msvc
+            targets: x86_64-pc-windows-msvc
             suffix: windows-x86_64
             ext: .exe
           - os: macos-latest
-            target: aarch64-apple-darwin
-            suffix: macos-arm64
-            ext: ""
-          - os: macos-13
-            target: x86_64-apple-darwin
-            suffix: macos-x86_64
+            targets: aarch64-apple-darwin x86_64-apple-darwin
+            suffix: macos
             ext: ""
 
     runs-on: ${{ matrix.os }}
@@ -36,23 +32,38 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install Rust toolchain
-        run: rustup toolchain install stable --profile minimal --target ${{ matrix.target }}
-
-      - name: Build release binary
-        run: cargo build --release --target ${{ matrix.target }}
-
-      - name: Package binary
         shell: bash
         run: |
-          mkdir docx2txt-${{ matrix.suffix }}
-          cp target/${{ matrix.target }}/release/docx2txt${{ matrix.ext }} docx2txt-${{ matrix.suffix }}/
-          tar czf docx2txt-${{ matrix.suffix }}.tar.gz docx2txt-${{ matrix.suffix }}
+          for t in ${{ matrix.targets }}; do
+            rustup toolchain install stable --profile minimal --target "$t"
+          done
 
-      - name: Upload artifact
+      - name: Build release binaries
+        shell: bash
+        run: |
+          for t in ${{ matrix.targets }}; do
+            cargo build --release --target "$t"
+          done
+
+      - name: Package binaries
+        shell: bash
+        run: |
+          for t in ${{ matrix.targets }}; do
+            case "$t" in
+              aarch64-apple-darwin) s=macos-arm64;;
+              x86_64-apple-darwin)  s=macos-x86_64;;
+              *)                    s=${{ matrix.suffix }};;
+            esac
+            mkdir "docx2txt-$s"
+            cp "target/$t/release/docx2txt${{ matrix.ext }}" "docx2txt-$s/"
+            tar czf "docx2txt-$s.tar.gz" "docx2txt-$s"
+          done
+
+      - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: docx2txt-${{ matrix.suffix }}
-          path: docx2txt-${{ matrix.suffix }}.tar.gz
+          path: docx2txt-*.tar.gz
 
   release:
     needs: build
