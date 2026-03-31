@@ -9,7 +9,6 @@
 
 use std::io::{self, Cursor, Read, Write};
 
-use regex::Regex;
 use zip::write::SimpleFileOptions;
 use zip::{ZipArchive, ZipWriter};
 
@@ -20,42 +19,71 @@ const STRIP_PARTS: &[&str] = &[
     "docMetadata/LabelInfo.xml",
 ];
 
+/// Remove `<open>...</close>` from xml.
+fn remove_element(xml: &mut String, open: &str, close: &str) {
+    while let Some(start) = xml.find(open) {
+        if let Some(end_rel) = xml[start..].find(close) {
+            xml.replace_range(start..start + end_rel + close.len(), "");
+        } else {
+            break;
+        }
+    }
+}
+
+/// Replace `attr="value"` with `attr="replacement"` wherever attr appears.
+fn replace_attr_value(xml: &mut String, attr: &str, replacement: &str) {
+    let needle = format!("{attr}=\"");
+    let mut pos = 0;
+    while let Some(rel) = xml[pos..].find(&needle) {
+        let val_start = pos + rel + needle.len();
+        if let Some(val_end_rel) = xml[val_start..].find('"') {
+            let val_end = val_start + val_end_rel;
+            xml.replace_range(val_start..val_end, replacement);
+            pos = val_start + replacement.len() + 1;
+        } else {
+            break;
+        }
+    }
+}
+
+/// Replace ISO 8601 timestamps (YYYY-MM-DDTHH:MM:SSZ) with epoch.
+fn replace_timestamps(xml: &mut String) {
+    // Timestamps appear inside XML attributes/elements with a fixed format.
+    let mut pos = 0;
+    while pos + 20 <= xml.len() {
+        let s = &xml[pos..];
+        // Look for the pattern: DDDD-DD-DDTDD:DD:DDZ (20 chars)
+        if s.len() >= 20
+            && s.as_bytes()[4] == b'-'
+            && s.as_bytes()[7] == b'-'
+            && s.as_bytes()[10] == b'T'
+            && s.as_bytes()[13] == b':'
+            && s.as_bytes()[16] == b':'
+            && s.as_bytes()[19] == b'Z'
+            && s[..4].bytes().all(|b| b.is_ascii_digit())
+            && s[5..7].bytes().all(|b| b.is_ascii_digit())
+            && s[8..10].bytes().all(|b| b.is_ascii_digit())
+            && s[11..13].bytes().all(|b| b.is_ascii_digit())
+            && s[14..16].bytes().all(|b| b.is_ascii_digit())
+            && s[17..19].bytes().all(|b| b.is_ascii_digit())
+        {
+            xml.replace_range(pos..pos + 20, "1970-01-01T00:00:00Z");
+            pos += 20;
+        } else {
+            pos += 1;
+        }
+    }
+}
+
 /// Scrub PII from XML content that we do keep.
 fn scrub_xml(xml: &str) -> String {
-    // Remove <cp:lastModifiedBy>...</cp:lastModifiedBy>
-    let re = Regex::new(r"<cp:lastModifiedBy>[^<]*</cp:lastModifiedBy>").unwrap();
-    let xml = re.replace_all(xml, "").to_string();
-
-    // Remove <dc:creator>...</dc:creator>
-    let re = Regex::new(r"<dc:creator>[^<]*</dc:creator>").unwrap();
-    let xml = re.replace_all(&xml, "").to_string();
-
-    // Neutralize w:author="..." attributes (e.g. on <w:del>)
-    let re = Regex::new(r#"w:author="[^"]*""#).unwrap();
-    let xml = re.replace_all(&xml, r#"w:author="""#).to_string();
-
-    // Zero out w15:val="{GUID}" persistent document IDs
-    let re = Regex::new(r#"w15:val="\{[0-9A-Fa-f-]+\}""#).unwrap();
-    let xml = re.replace_all(
-        &xml,
-        r#"w15:val="{00000000-0000-0000-0000-000000000000}""#,
-    )
-    .to_string();
-
-    // Zero out MIP label siteId GUIDs
-    let re = Regex::new(r#"siteId="\{[0-9A-Fa-f-]+\}""#).unwrap();
-    let xml = re.replace_all(
-        &xml,
-        r#"siteId="{00000000-0000-0000-0000-000000000000}""#,
-    )
-    .to_string();
-
-    // Clamp timestamps to epoch
-    let re = Regex::new(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z").unwrap();
-    let xml = re
-        .replace_all(&xml, "1970-01-01T00:00:00Z")
-        .to_string();
-
+    let mut xml = xml.to_string();
+    remove_element(&mut xml, "<cp:lastModifiedBy>", "</cp:lastModifiedBy>");
+    remove_element(&mut xml, "<dc:creator>", "</dc:creator>");
+    replace_attr_value(&mut xml, "w:author", "");
+    replace_attr_value(&mut xml, "w15:val", "{00000000-0000-0000-0000-000000000000}");
+    replace_attr_value(&mut xml, "siteId", "{00000000-0000-0000-0000-000000000000}");
+    replace_timestamps(&mut xml);
     xml
 }
 

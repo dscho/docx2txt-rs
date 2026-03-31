@@ -1,18 +1,18 @@
-Bullet one
-Bullet two
-Bullet three
-First item
-Second item
-Third item
-Alpha
-Bravo
-Charlie
-First
-Second
-Third
-Parent one
-# Child A
-# Child B
-Parent two
-# Child C
+* Bullet one
+* Bullet two
+* Bullet three
+   1. First item
+   1. Second item
+   2. Third item
+   a) Alpha
+   b) Bravo
+   c) Charlie
+   I. First
+   II. Second
+   III. Third
+   1. Parent one
+         o # Child A
+         o # Child B
+   1. Parent two
+         o # Child C
 
