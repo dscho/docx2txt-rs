@@ -6,3 +6,6 @@ edition = "2024"
 [dependencies]
 regex = "1"
 zip = "2"
+
+[profile.release]
+lto = true
