@@ -7,7 +7,7 @@ and hyperlink annotations.
 This is a Rust rewrite of docx2txt 1.4
 (http://docx2txt.sourceforge.net/) by Sandeep Kumar. The original is
 a Perl script; this rewrite exists so that Git for Windows can drop
-its Perl dependency while retaining `git diff` support for .docx files.
+its Perl and unzip dependencies while retaining `git diff` support for .docx files.
 
 
 ## Status
